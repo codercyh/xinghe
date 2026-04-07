@@ -48,8 +48,9 @@ export async function POST(req: NextRequest) {
     const L = require('lunar-javascript');
 
     const solar = L.Solar.fromYmd(year, month, day);
-    const lunar = solar.toLunar();
+    const lunar = solar.getLunar();
     const ec = L.EightChar.fromLunar(lunar);
+    ec.setSect(1);
 
     const gans = [
       TIAN_GAN[ec.getYearGanIndex()],
