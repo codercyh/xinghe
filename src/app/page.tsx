@@ -299,6 +299,7 @@ export default function HomePage() {
           <div className="nav-logo">✦ 星合</div>
           <div className="flex gap-2">
             <Link href="/history" className="btn-secondary px-4 py-2 text-sm">📜 历史</Link>
+            <Link href="/match" className="btn-secondary px-4 py-2 text-sm">💘 合盘</Link>
             <Link href="/about" className="btn-secondary px-4 py-2 text-sm">关于</Link>
           </div>
         </nav>

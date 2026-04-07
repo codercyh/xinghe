@@ -1,13 +1,4 @@
 declare module 'lunar-javascript' {
-  export interface MonthInfo {
-    monthGanIndex: number;
-    monthZhiIndex: number;
-  }
-
-  export interface LunarStatic {
-    fromYmd(year: number, month: number, day: number): Lunar;
-  }
-
   export interface Lunar {
     getYear(): number;
     getMonth(): number;
@@ -15,10 +6,16 @@ declare module 'lunar-javascript' {
     isLeapMonth(): boolean;
     getDayGanIndex(): number;
     getDayZhiIndex(): number;
-    getMonthInfo(): MonthInfo;
+    getMonthInfo(): { monthGanIndex: number; monthZhiIndex: number };
     toString(): string;
+    toFullString(): string;
+  }
+
+  export interface LunarStatic {
+    fromYmd(year: number, month: number, day: number): Lunar;
   }
 
   const Lunar: LunarStatic;
   export default Lunar;
+  export { Lunar };
 }

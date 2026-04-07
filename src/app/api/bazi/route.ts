@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { calculateBazi } from '@/lib/bazi';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,10 +19,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const data = calculateBazi(year, month, day, hour, gender);
-
-    return NextResponse.json({ success: true, data });
-  } catch {
+    // 八字计算在客户端进行（前端 JS 兼容 lunar-javascript CJS）
+    // 此 API 路由目前作为占位，后续可扩展服务端验证
+    return NextResponse.json(
+      { success: false, error: { code: 'CLIENT_CALCULATION', message: '八字计算在客户端进行，请调用前端 calculateBazi 函数' } },
+      { status: 400 }
+    );
+  } catch (err) {
     return NextResponse.json(
       { success: false, error: { code: 'SERVER_ERROR', message: '服务器异常，请稍后再试' } },
       { status: 500 }
