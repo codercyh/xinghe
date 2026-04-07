@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUserStore } from '@/store/userStore';
 import { buildZodiacData } from '@/lib/zodiac';
-import { calculateBaziAsync } from '@/lib/bazi';
+import { calculateBazi, calculateBaziAsync } from '@/lib/bazi';
 import { buildSystemPrompt } from '@/lib/prompts';
 import type { MasterType, ChatMessage } from '@/types/user';
 import type { ZodiacData, BaziData } from '@/types/user';
