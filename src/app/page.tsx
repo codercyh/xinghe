@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -296,7 +297,10 @@ export default function HomePage() {
         {/* Nav */}
         <nav className="nav-bar">
           <div className="nav-logo">✦ 星合</div>
-          <button className="btn-secondary px-4 py-2 text-sm">关于</button>
+          <div className="flex gap-2">
+            <Link href="/history" className="btn-secondary px-4 py-2 text-sm">📜 历史</Link>
+            <Link href="/about" className="btn-secondary px-4 py-2 text-sm">关于</Link>
+          </div>
         </nav>
 
         {/* Hero */}

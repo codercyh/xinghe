@@ -1,6 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { BirthInfo, ZodiacData, BaziData, ChatMessage, MasterType } from '@/types/user';
 
 interface UserStore {
@@ -26,35 +27,86 @@ interface UserStore {
   setIsLoading: (loading: boolean) => void;
   currentView: 'home' | 'result';
   setCurrentView: (view: 'home' | 'result') => void;
+
+  // 历史记录列表
+  history: HistoryItem[];
+  addHistory: (item: HistoryItem) => void;
+  removeHistory: (id: string) => void;
+  clearHistory: () => void;
 }
 
 let msgIdCounter = 0;
 
-export const useUserStore = create<UserStore>((set) => ({
-  birthInfo: null,
-  setBirthInfo: (info) => set({ birthInfo: info }),
+export interface HistoryItem {
+  id: string;
+  birthInfo: BirthInfo;
+  zodiacData: ZodiacData;
+  baziData: BaziData;
+  createdAt: number;
+}
 
-  zodiacData: null,
-  baziData: null,
-  setZodiacData: (data) => set({ zodiacData: data }),
-  setBaziData: (data) => set({ baziData: data }),
+export const useUserStore = create<UserStore>()(
+  persist(
+    (set, get) => ({
+      birthInfo: null,
+      setBirthInfo: (info) => set({ birthInfo: info }),
 
-  currentMaster: 'mínglǐ',
-  setCurrentMaster: (master) => set({ currentMaster: master }),
+      zodiacData: null,
+      baziData: null,
+      setZodiacData: (data) => set({ zodiacData: data }),
+      setBaziData: (data) => set({ baziData: data }),
 
-  chatMessages: [],
-  addChatMessage: (msg) =>
-    set((state) => ({
-      chatMessages: [
-        ...state.chatMessages,
-        { ...msg, id: `msg-${++msgIdCounter}`, timestamp: Date.now() },
-      ],
-    })),
-  clearChat: () => set({ chatMessages: [] }),
+      currentMaster: 'mínglǐ',
+      setCurrentMaster: (master) => set({ currentMaster: master }),
 
-  isLoading: false,
-  setIsLoading: (loading) => set({ isLoading: loading }),
+      chatMessages: [],
+      addChatMessage: (msg) =>
+        set((state) => ({
+          chatMessages: [
+            ...state.chatMessages,
+            { ...msg, id: `msg-${++msgIdCounter}`, timestamp: Date.now() },
+          ],
+        })),
+      clearChat: () => set({ chatMessages: [] }),
 
-  currentView: 'home',
-  setCurrentView: (view) => set({ currentView: view }),
-}));
+      isLoading: false,
+      setIsLoading: (loading) => set({ isLoading: loading }),
+
+      currentView: 'home',
+      setCurrentView: (view) => set({ currentView: view }),
+
+      history: [],
+      addHistory: (item) =>
+        set((state) => {
+          // 避免重复（同一人同一天只存一条，取最新）
+          const exists = state.history.find(
+            (h) =>
+              h.birthInfo.year === item.birthInfo.year &&
+              h.birthInfo.month === item.birthInfo.month &&
+              h.birthInfo.day === item.birthInfo.day &&
+              h.birthInfo.hour === item.birthInfo.hour
+          );
+          if (exists) {
+            // 更新已有记录
+            return {
+              history: state.history.map((h) =>
+                h.id === exists.id ? { ...item, id: exists.id } : h
+              ),
+            };
+          }
+          return { history: [item, ...state.history].slice(0, 20) }; // 最多存20条
+        }),
+      removeHistory: (id) =>
+        set((state) => ({
+          history: state.history.filter((h) => h.id !== id),
+        })),
+      clearHistory: () => set({ history: [] }),
+    }),
+    {
+      name: 'xinghe-storage',
+      partialize: (state) => ({
+        history: state.history,
+      }),
+    }
+  )
+);

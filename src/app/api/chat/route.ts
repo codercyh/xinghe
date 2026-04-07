@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Use streaming response for SSE
     const response = await fetch(MINIMAX_API_URL, {
       method: 'POST',
       headers: {
@@ -36,29 +37,91 @@ export async function POST(req: NextRequest) {
         })),
         temperature: 0.8,
         max_tokens: 1024,
+        stream: true,
       }),
     });
 
-    const status = response.status;
-    const data = await response.json().catch(() => ({}));
-
     if (!response.ok) {
-      console.error('MiniMax API error:', status, data);
+      const data = await response.json().catch(() => ({}));
+      console.error('MiniMax API error:', response.status, data);
       return NextResponse.json(
-        { success: false, error: { code: 'AI_ERROR', message: `AI 服务异常 (${status})：${data.error?.message ?? '请稍后再试'}` } },
+        { success: false, error: { code: 'AI_ERROR', message: `AI 服务异常 (${response.status})：${data.error?.message ?? '请稍后再试'}` } },
         { status: 502 }
       );
     }
 
-    const reply = data.choices?.[0]?.message?.content ?? '';
-    if (!reply) {
-      return NextResponse.json(
-        { success: false, error: { code: 'AI_ERROR', message: 'AI 返回内容为空，请稍后再试' } },
-        { status: 502 }
-      );
-    }
+    // SSE streaming
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body!.getReader();
+        let fullContent = '';
+        let buffer = '';
 
-    return NextResponse.json({ success: true, reply });
+        const push = async () => {
+          try {
+            const { done, value } = await reader.read();
+            if (done) {
+              if (buffer.length > 0) {
+                try {
+                  const line = buffer.trim();
+                  if (line.startsWith('data:')) {
+                    const jsonStr = line.slice(5).trim();
+                    if (jsonStr && jsonStr !== '[DONE]') {
+                      const data = JSON.parse(jsonStr);
+                      const delta = data.choices?.[0]?.delta?.content ?? '';
+                      if (delta) {
+                        fullContent += delta;
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`));
+                      }
+                    }
+                  }
+                } catch {}
+              }
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', content: fullContent })}\n\n`));
+              controller.close();
+              return;
+            }
+
+            buffer += new TextDecoder().decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith('data:')) continue;
+              const jsonStr = trimmed.slice(5).trim();
+              if (!jsonStr || jsonStr === '[DONE]') continue;
+
+              try {
+                const data = JSON.parse(jsonStr);
+                const delta = data.choices?.[0]?.delta?.content ?? '';
+                if (delta) {
+                  fullContent += delta;
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`));
+                }
+              } catch {
+                // skip malformed JSON
+              }
+            }
+            push();
+          } catch {
+            controller.close();
+          }
+        };
+
+        push();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (err) {
     console.error('Chat API error:', err);
     return NextResponse.json(

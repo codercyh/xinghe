@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useUserStore } from '@/store/userStore';
 import { buildZodiacData } from '@/lib/zodiac';
 import { calculateBazi } from '@/lib/bazi';
@@ -60,7 +61,7 @@ function ChatSection({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isApiReady] = useState(true);
+  const [streamingContent, setStreamingContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -94,7 +95,7 @@ function ChatSection({
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingContent]);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -105,6 +106,7 @@ function ChatSection({
     setInput('');
     if (inputRef.current) inputRef.current.style.height = 'auto';
     setIsTyping(true);
+    setStreamingContent('');
 
     try {
       const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
@@ -121,16 +123,49 @@ function ChatSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: allMessages, masterType: currentMaster }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setMessages(prev => [...prev, { id: `ai-${Date.now()}`, role: 'assistant', content: data.reply, timestamp: Date.now() }]);
-      } else {
+
+      if (!res.ok) {
         setMessages(prev => [...prev, { id: `ai-${Date.now()}`, role: 'assistant', content: '抱歉，我现在有些走神，请稍后再试试。', timestamp: Date.now() }]);
+        setIsTyping(false);
+        setStreamingContent('');
+        return;
       }
+
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr || jsonStr === '[DONE]') continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            if (data.type === 'chunk') {
+              fullContent += data.content;
+              setStreamingContent(fullContent);
+            }
+          } catch {}
+        }
+      }
+
+      // Commit completed message
+      setMessages(prev => [...prev, { id: `ai-${Date.now()}`, role: 'assistant', content: fullContent, timestamp: Date.now() }]);
+      setStreamingContent('');
     } catch {
       setMessages(prev => [...prev, { id: `ai-${Date.now()}`, role: 'assistant', content: '网络有点不给力，请稍后再试试～', timestamp: Date.now() }]);
     } finally {
       setIsTyping(false);
+      setStreamingContent('');
     }
   };
 
@@ -195,16 +230,17 @@ function ChatSection({
           </div>
         ))}
 
-        {/* Typing indicator */}
+        {/* Streaming indicator — shows typewriter preview */}
         {isTyping && (
           <div className="flex gap-3 animate-[msgIn_0.4s_ease-out]">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6366F1] to-[#EC4899] flex items-center justify-center text-lg flex-shrink-0">
               {masterAvatars[currentMaster]}
             </div>
-            <div className="chat-bubble-ai px-4 py-3.5 flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#475569] animate-[typingBounce_1.4s_infinite]" style={{ animationDelay: '0s' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#475569] animate-[typingBounce_1.4s_infinite]" style={{ animationDelay: '0.2s' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-[#475569] animate-[typingBounce_1.4s_infinite]" style={{ animationDelay: '0.4s' }} />
+            <div className="max-w-[85%]">
+              <div className="chat-bubble-ai px-4 py-3">
+                <span className="text-[#94A3B8]">{streamingContent}</span>
+                <span className="inline-block w-1.5 h-3.5 bg-[#818CF8] ml-0.5 animate-[cursorBlink_0.8s_infinite] align-middle" />
+              </div>
             </div>
           </div>
         )}
@@ -235,6 +271,7 @@ function ChatSection({
       <style>{`
         @keyframes msgIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
         @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+        @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
       `}</style>
     </div>
   );
@@ -243,7 +280,7 @@ function ChatSection({
 // ===== Result Page =====
 export default function ResultPage() {
   const router = useRouter();
-  const { birthInfo, zodiacData, baziData, setZodiacData, setBaziData, currentMaster, setCurrentMaster } = useUserStore();
+  const { birthInfo, zodiacData, baziData, setZodiacData, setBaziData, currentMaster, setCurrentMaster, addHistory } = useUserStore();
   const [zodiac, setZodiac] = useState<ZodiacData | null>(null);
   const [bazi, setBazi] = useState<BaziData | null>(null);
   const [activeTab, setActiveTab] = useState<'constellation' | 'bazi' | 'chat'>('constellation');
@@ -270,6 +307,13 @@ export default function ResultPage() {
     if (zData && bData) {
       setZodiac(zData);
       setBazi(bData);
+      addHistory({
+        id: `h-${info.year}-${info.month}-${info.day}-${info.hour}`,
+        birthInfo: info,
+        zodiacData: zData,
+        baziData: bData,
+        createdAt: Date.now(),
+      });
     } else {
       // Calculate locally
       const z = buildZodiacData(info.year, info.month, info.day, info.hour);
@@ -278,6 +322,13 @@ export default function ResultPage() {
       setBazi(b);
       setZodiacData(z);
       setBaziData(b);
+      addHistory({
+        id: `h-${info.year}-${info.month}-${info.day}-${info.hour}`,
+        birthInfo: info,
+        zodiacData: z,
+        baziData: b,
+        createdAt: Date.now(),
+      });
     }
   }, []);
 
@@ -314,7 +365,10 @@ export default function ResultPage() {
       <nav className="nav-bar">
         <button onClick={handleBack} className="btn-secondary px-4 py-2 text-sm">← 返回</button>
         <div className="nav-logo">✦ 星合</div>
-        <button onClick={handleRestart} className="btn-secondary px-4 py-2 text-sm">🔄 重新输入</button>
+        <div className="flex gap-2">
+          <Link href="/history" className="btn-secondary px-4 py-2 text-sm">📜 历史</Link>
+          <button onClick={handleRestart} className="btn-secondary px-4 py-2 text-sm">🔄 重新输入</button>
+        </div>
       </nav>
 
       {/* Content */}
