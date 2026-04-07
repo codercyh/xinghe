@@ -52,6 +52,12 @@ export interface BaziData {
     summary: string;
     nextDecade: string;
   };
+  lunarInfo: {
+    lunarYear: number;
+    lunarMonth: number;
+    lunarDay: number;
+    isLeapMonth: boolean;
+  };
 }
 
 // 对话消息

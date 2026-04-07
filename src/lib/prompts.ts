@@ -31,13 +31,13 @@ export function buildSystemPrompt(
   const userContext = `
 
 用户出生信息：
-- 出生日期：${baziData.pillars.year.gan}${baziData.pillars.year.zhi}年
+- 出生日期：公历${baziData.lunarInfo?.lunarYear ?? ''}年${baziData.lunarInfo?.lunarMonth ?? ''}月${baziData.lunarInfo?.lunarDay ?? ''}日（农历${baziData.lunarInfo?.lunarYear ?? ''}年）
 - 太阳星座：${zodiacData.sun.name} ${zodiacData.sun.symbol}
 - 月亮星座：${zodiacData.moon.name}
 - 上升星座：${zodiacData.rising.name}
 - 八字：${baziData.pillars.year.gan}${baziData.pillars.year.zhi} / ${baziData.pillars.month.gan}${baziData.pillars.month.zhi} / ${baziData.pillars.day.gan}${baziData.pillars.day.zhi} / ${baziData.pillars.hour.gan}${baziData.pillars.hour.zhi}
 - 五行分布：金${baziData.wuxing.metal} 木${baziData.wuxing.wood} 水${baziData.wuxing.water} 火${baziData.wuxing.fire} 土${baziData.wuxing.earth}
-- 日主：${baziData.dayMaster}
+- 日主：${baziData.dayMaster}（${baziData.dayStrength === 'strong' ? '偏旺' : baziData.dayStrength === 'weak' ? '偏弱' : '中和'}）
 - 命理简述：${baziData.dayun.summary}
 
 请结合以上信息，用你擅长的方式为用户解读。`;

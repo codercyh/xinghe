@@ -486,6 +486,18 @@ export default function ResultPage() {
               </div>
             </div>
 
+            {/* Lunar info badge */}
+            {bazi.lunarInfo && (
+              <div className="mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[rgba(99,102,241,0.08)] border border-[rgba(99,102,241,0.2)] rounded-full text-xs text-[#818CF8]">
+                  <span>🌙</span>
+                  农历 {bazi.lunarInfo.lunarYear}年
+                  {bazi.lunarInfo.isLeapMonth && <span className="text-[#F59E0B]">闰</span>}
+                  {bazi.lunarInfo.lunarMonth}月{bazi.lunarInfo.lunarDay}日
+                </div>
+              </div>
+            )}
+
             {/* Dayun summary */}
             <div className="bg-[rgba(99,102,241,0.06)] border border-[rgba(99,102,241,0.15)] rounded-[var(--radius-md)] p-3 text-sm text-[#94A3B8] leading-relaxed">
               <strong className="text-[#818CF8]">{bazi.dayMaster}</strong> 坐
