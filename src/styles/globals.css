@@ -298,6 +298,20 @@ body {
   .mobile-tab-content.active {
     display: block !important;
   }
+  /* Chat section: on mobile only show when .chat-section-show */
+  .chat-section-wrapper {
+    display: none;
+  }
+  .chat-section-wrapper.chat-section-show {
+    display: block;
+  }
+}
+
+/* Desktop: always show chat section */
+@media (min-width: 769px) {
+  .chat-section-wrapper {
+    display: block;
+  }
 }
 
 .mobile-tab {

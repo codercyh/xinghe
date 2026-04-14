@@ -10,6 +10,20 @@ export interface BirthInfo {
   timezone: string;
 }
 
+// 星座解读详细数据
+export interface ZodiacDetail {
+  element_trait: string;
+  personality: string[];
+  strength: string[];
+  weakness: string[];
+  relationship: string;
+  career: string;
+  hidden_self: string;
+  growth: string[];
+  stress_signal: string;
+  compatible: string[];
+}
+
 // 星座信息
 export interface ZodiacSign {
   name: string;
@@ -18,6 +32,9 @@ export interface ZodiacSign {
   end: string | number[];
   trait: string;
   lunarDate?: string;
+  detail?: ZodiacDetail;
+  element?: string;
+  modality?: string;
 }
 
 export interface ZodiacData {

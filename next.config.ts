@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: process.env.ANALYZE === 'true' });
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  // turbpacks/Next 16 manages minification; remove swcMinify to avoid warnings
+  // swcMinify: true,
 };
 
-export default nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

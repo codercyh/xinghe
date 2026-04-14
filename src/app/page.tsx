@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useUserStore } from '@/store/userStore';
 import type { BirthInfo } from '@/types/user';
+import CustomSelect from '@/components/CustomSelect';
 
 const schema = z.object({
   year: z.number().min(1940).max(2030),
@@ -242,7 +244,7 @@ export default function HomePage() {
   const [showSeconds, setShowSeconds] = useState(false);
   const [pageState, setPageState] = useState<'home' | 'loading'>('home');
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       year: 2000,
@@ -267,25 +269,29 @@ export default function HomePage() {
   const gender = watch('gender');
 
   const onSubmit = async (data: FormData) => {
-    setPageState('loading');
-    setIsLoading(true);
-
     const birthInfo: BirthInfo = {
       ...data,
       second: showSeconds ? data.second : 0,
     };
 
-    // Store in Zustand
-    setBirthInfo(birthInfo);
-
-    // Also store in sessionStorage for persistence
+    // Store in sessionStorage FIRST (always available)
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('xinghe_birthInfo', JSON.stringify(birthInfo));
     }
+
+    // Flush state then navigate
+    flushSync(() => {
+      setBirthInfo(birthInfo);
+      setPageState('loading');
+      setIsLoading(true);
+    });
   };
 
   const handleLoadingComplete = () => {
-    setPageState('home');
+    flushSync(() => {
+      setPageState('home');
+      setIsLoading(false);
+    });
     router.push('/result');
   };
 
@@ -322,24 +328,42 @@ export default function HomePage() {
             <div>
               <label className="block text-[#94A3B8] text-sm mb-2 font-medium">出生日期</label>
               <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[#475569] text-xs text-center mb-1">年</label>
-                  <select {...register('year', { valueAsNumber: true })} className="input-field text-center py-2.5">
-                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[#475569] text-xs text-center mb-1">月</label>
-                  <select {...register('month', { valueAsNumber: true })} className="input-field text-center py-2.5">
-                    {months.map(m => <option key={m} value={m}>{m}月</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[#475569] text-xs text-center mb-1">日</label>
-                  <select {...register('day', { valueAsNumber: true })} className="input-field text-center py-2.5">
-                    {days.map(d => <option key={d} value={d}>{d}日</option>)}
-                  </select>
-                </div>
+                <Controller
+                  name="year"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={years.map(y => ({ value: y, label: String(y) }))}
+                      label="年"
+                    />
+                  )}
+                />
+                <Controller
+                  name="month"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={months.map(m => ({ value: m, label: `${m}月` }))}
+                      label="月"
+                    />
+                  )}
+                />
+                <Controller
+                  name="day"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={days.map(d => ({ value: d, label: `${d}日` }))}
+                      label="日"
+                    />
+                  )}
+                />
               </div>
             </div>
 
@@ -347,18 +371,30 @@ export default function HomePage() {
             <div>
               <label className="block text-[#94A3B8] text-sm mb-2 font-medium">出生时间</label>
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[#475569] text-xs text-center mb-1">时</label>
-                  <select {...register('hour', { valueAsNumber: true })} className="input-field text-center py-2.5">
-                    {hours.map(h => <option key={h} value={h}>{String(h).padStart(2,'0')}时</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[#475569] text-xs text-center mb-1">分</label>
-                  <select {...register('minute', { valueAsNumber: true })} className="input-field text-center py-2.5">
-                    {minutes.map(m => <option key={m} value={m}>{String(m).padStart(2,'0')}分</option>)}
-                  </select>
-                </div>
+                <Controller
+                  name="hour"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={hours.map(h => ({ value: h, label: `${String(h).padStart(2,'0')}时` }))}
+                      label="时"
+                    />
+                  )}
+                />
+                <Controller
+                  name="minute"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={minutes.map(m => ({ value: m, label: `${String(m).padStart(2,'0')}分` }))}
+                      label="分"
+                    />
+                  )}
+                />
               </div>
 
               {/* Seconds toggle */}
@@ -373,12 +409,18 @@ export default function HomePage() {
 
               {showSeconds && (
                 <div className="grid grid-cols-1 gap-2 mt-2">
-                  <div>
-                    <label className="block text-[#475569] text-xs text-center mb-1">秒</label>
-                    <select {...register('second', { valueAsNumber: true })} className="input-field text-center py-2.5">
-                      {seconds.map(s => <option key={s} value={s}>{String(s).padStart(2,'0')}秒</option>)}
-                    </select>
-                  </div>
+                  <Controller
+                    name="second"
+                    control={control}
+                    render={({ field }) => (
+                      <CustomSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={seconds.map(s => ({ value: s, label: `${String(s).padStart(2,'0')}秒` }))}
+                        label="秒"
+                      />
+                    )}
+                  />
                 </div>
               )}
             </div>
@@ -415,15 +457,25 @@ export default function HomePage() {
             {/* Timezone */}
             <div>
               <label className="block text-[#94A3B8] text-sm mb-2 font-medium">时区</label>
-              <select {...register('timezone')} className="input-field py-2.5 px-3 bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%2394A3B8%22%20d%3D%22M6%208L1%203h10z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_12px_center] bg-[length:12px]">
-                <option value="Asia/Shanghai">🇨🇳 中国（GMT+8）</option>
-                <option value="Asia/Hong_Kong">🇭🇰 香港（GMT+8）</option>
-                <option value="Asia/Taipei">🇹🇼 台北（GMT+8）</option>
-                <option value="Asia/Tokyo">🇯🇵 日本（GMT+9）</option>
-                <option value="Asia/Singapore">🇸🇬 新加坡（GMT+8）</option>
-                <option value="America/New_York">🇺🇸 纽约（GMT-5）</option>
-                <option value="Europe/London">🇬🇧 伦敦（GMT+0）</option>
-              </select>
+              <Controller
+                name="timezone"
+                control={control}
+                render={({ field }) => (
+                  <CustomSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={[
+                      { value: 'Asia/Shanghai', label: '🇨🇳 中国（GMT+8）' },
+                      { value: 'Asia/Hong_Kong', label: '🇭🇰 香港（GMT+8）' },
+                      { value: 'Asia/Taipei', label: '🇹🇼 台北（GMT+8）' },
+                      { value: 'Asia/Tokyo', label: '🇯🇵 日本（GMT+9）' },
+                      { value: 'Asia/Singapore', label: '🇸🇬 新加坡（GMT+8）' },
+                      { value: 'America/New_York', label: '🇺🇸 纽约（GMT-5）' },
+                      { value: 'Europe/London', label: '🇬🇧 伦敦（GMT+0）' },
+                    ]}
+                  />
+                )}
+              />
             </div>
 
             {/* Submit */}
