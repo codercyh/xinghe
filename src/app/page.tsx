@@ -491,6 +491,11 @@ export default function HomePage() {
           已有 <strong className="text-[#F59E0B]">12,847</strong> 人解锁自己的星合 ✦
         </p>
 
+        {/* Email capture */}
+        <div className="mt-6 w-full max-w-[520px]">
+          <EmailCapture />
+        </div>
+
         {/* Star canvas */}
         <StarCanvas />
 
