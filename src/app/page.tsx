@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { useUserStore } from '@/store/userStore';
 import type { BirthInfo } from '@/types/user';
 import CustomSelect from '@/components/CustomSelect';
+import EmailCapture from '@/components/EmailCapture';
+import LazyLoadStar from '@/components/lazyLoadStar';
 
 const schema = z.object({
   year: z.number().min(1940).max(2030),
@@ -498,8 +500,8 @@ export default function HomePage() {
 
         {/* Star canvas (lazy load for performance) */}
         <div id="star-canvas-root" className="w-full h-full">
-          {/* StarCanvas will be lazy-loaded on mount to reduce initial JS */}
-        <script type="module">(async()=>{const m=await import("/src/components/lazyLoadStar.tsx");})();</script>
+        <div id="star-canvas-root" className="w-full h-full">
+          {/* StarCanvas will be lazy-loaded via LazyLoadStar component */}
         </div>
 
         {/* Global animation styles */}
