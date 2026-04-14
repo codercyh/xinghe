@@ -895,3 +895,4 @@ export default function ResultPage() {
     </div>
   );
 }
+<script src="/checkout-demo.js"></script>
