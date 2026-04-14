@@ -496,8 +496,11 @@ export default function HomePage() {
           <EmailCapture />
         </div>
 
-        {/* Star canvas */}
-        <StarCanvas />
+        {/* Star canvas (lazy load for performance) */}
+        <div id="star-canvas-root" className="w-full h-full">
+          {/* StarCanvas will be lazy-loaded on mount to reduce initial JS */}
+        <script type="module">(async()=>{const m=await import("/src/components/lazyLoadStar.tsx");})();</script>
+        </div>
 
         {/* Global animation styles */}
         <style>{`
