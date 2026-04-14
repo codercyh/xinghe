@@ -29,8 +29,14 @@ export async function POST(req: Request){
     // Save locally (placeholder). In production, replace with DB (Supabase/Postgres).
     saveSubscriber({ email, name });
 
-    // If email provider key present, you can add sending logic here.
-    // e.g. if (process.env.SENDGRID_API_KEY) { await sendWelcomeEmail(email); }
+    // If email provider key present, send a welcome email (non-blocking)
+    try{
+      const { sendWelcomeEmail } = await import('@/lib/email');
+      // fire-and-forget
+      sendWelcomeEmail(email, name).catch((e)=>console.error('welcome email failed', e));
+    }catch(e){
+      // ignore if email lib not installed or missing key
+    }
 
     return NextResponse.json({ ok: true });
   }catch(err){
