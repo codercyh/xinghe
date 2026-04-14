@@ -500,9 +500,9 @@ export default function HomePage() {
 
         {/* Star canvas (lazy load for performance) */}
         <div id="star-canvas-root" className="w-full h-full">
-        <div id="star-canvas-root" className="w-full h-full">
           {/* StarCanvas will be lazy-loaded via LazyLoadStar component */}
         </div>
+        <LazyLoadStar />
 
         {/* Global animation styles */}
         <style>{`
